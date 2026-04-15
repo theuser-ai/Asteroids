@@ -55,6 +55,20 @@ function getAudioCtx() {
   return audioCtx;
 }
 
+// iOS requires a silent buffer played inside a direct touch handler to unlock audio
+function unlockAudio() {
+  const ctx = getAudioCtx();
+  const buf = ctx.createBuffer(1, 1, 22050);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  src.start(0);
+  document.removeEventListener('touchstart', unlockAudio);
+  document.removeEventListener('keydown', unlockAudio);
+}
+document.addEventListener('touchstart', unlockAudio, { once: true });
+document.addEventListener('keydown',    unlockAudio, { once: true });
+
 function playShoot() {
   const ctx = getAudioCtx();
   const osc = ctx.createOscillator();
