@@ -13,8 +13,8 @@ const highScoreEl = document.getElementById('high-score');
 // ─── Constants ───
 const FPS = 60;
 const SHIP_SIZE = 20;
-const SHIP_THRUST = 0.12;
-const SHIP_FRICTION = 0.99;
+const SHIP_THRUST = 0.07;
+const SHIP_FRICTION = 0.97;
 const TURN_SPEED = 0.07;
 const BULLET_SPEED = 8;
 const BULLET_LIFE = 55;
@@ -260,7 +260,7 @@ function createAsteroid(x, y, size) {
   for (let i = 0; i < ASTEROID_VERTICES; i++) {
     offsets.push(1 + Math.random() * ASTEROID_JAG * 2 - ASTEROID_JAG);
   }
-  return { x, y, dx: Math.cos(angle) * speed, dy: Math.sin(angle) * speed, size, radius: size * 15, offsets };
+  return { x, y, dx: Math.cos(angle) * speed, dy: Math.sin(angle) * speed, size, radius: size * 10, offsets };
 }
 
 function spawnAsteroids(count) {
