@@ -16,19 +16,30 @@
     </div>
     <div id="start-screen" class="screen">
       <h1>ASTEROIDS</h1>
+      <p class="version">VERSION 2.0</p>
       <p class="subtitle">1979 ATARI CLASSIC</p>
-      <div class="controls-info">
+      <div class="controls-info desktop-only">
         <p>↑ or W — THRUST</p>
         <p>← → or A D — ROTATE</p>
         <p>SPACE — FIRE</p>
       </div>
-      <p class="blink">PRESS ENTER TO START</p>
+      <p class="blink start-prompt"></p>
     </div>
     <div id="game-over-screen" class="screen hidden">
       <h1>GAME OVER</h1>
       <p id="final-score"></p>
       <p id="high-score"></p>
-      <p class="blink">PRESS ENTER TO PLAY AGAIN</p>
+      <p class="blink start-prompt"></p>
+    </div>
+
+    <!-- Mobile touch controls -->
+    <div id="touch-controls">
+      <div id="touch-left">
+        <button class="touch-btn" id="btn-left">◄</button>
+        <button class="touch-btn" id="btn-right">►</button>
+      </div>
+      <button class="touch-btn" id="btn-thrust">▲</button>
+      <button class="touch-btn" id="btn-fire">●</button>
     </div>
   </div>
   <script src="game.js"></script>
