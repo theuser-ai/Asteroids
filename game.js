@@ -48,92 +48,113 @@ let fireCooldown = 0;
 
 // ─── Audio ───
 let audioCtx = null;
+let audioUnlocked = false;
 
 function getAudioCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  return audioCtx;
+  try {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      audioCtx = new AC();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  } catch(e) { return null; }
 }
 
 // iOS requires a silent buffer played inside a direct touch handler to unlock audio
 function unlockAudio() {
-  const ctx = getAudioCtx();
-  const buf = ctx.createBuffer(1, 1, 22050);
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  src.connect(ctx.destination);
-  src.start(0);
-  document.removeEventListener('touchstart', unlockAudio);
-  document.removeEventListener('keydown', unlockAudio);
+  try {
+    const ac = getAudioCtx();
+    if (!ac) return;
+    const buf = ac.createBuffer(1, 1, 22050);
+    const src = ac.createBufferSource();
+    src.buffer = buf;
+    src.connect(ac.destination);
+    src.start(0);
+    audioUnlocked = true;
+  } catch(e) {}
 }
 document.addEventListener('touchstart', unlockAudio, { once: true });
 document.addEventListener('keydown',    unlockAudio, { once: true });
 
 function playShoot() {
-  const ctx = getAudioCtx();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.type = 'square';
-  osc.frequency.setValueAtTime(880, ctx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.08);
-  gain.gain.setValueAtTime(0.25, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + 0.1);
+  try {
+    const ac = getAudioCtx();
+    if (!ac) return;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(880, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(220, ac.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.25, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.1);
+    osc.start(ac.currentTime);
+    osc.stop(ac.currentTime + 0.1);
+  } catch(e) {}
 }
 
 function playExplosion(large) {
-  const ctx = getAudioCtx();
-  const bufferSize = ctx.sampleRate * (large ? 0.6 : 0.3);
-  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-  const source = ctx.createBufferSource();
-  source.buffer = buffer;
-  const gain = ctx.createGain();
-  const filter = ctx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(large ? 400 : 800, ctx.currentTime);
-  source.connect(filter);
-  filter.connect(gain);
-  gain.connect(ctx.destination);
-  gain.gain.setValueAtTime(large ? 0.8 : 0.5, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (large ? 0.6 : 0.3));
-  source.start(ctx.currentTime);
+  try {
+    const ac = getAudioCtx();
+    if (!ac) return;
+    const bufferSize = ac.sampleRate * (large ? 0.6 : 0.3);
+    const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const source = ac.createBufferSource();
+    source.buffer = buffer;
+    const gain = ac.createGain();
+    const filter = ac.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(large ? 400 : 800, ac.currentTime);
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(ac.destination);
+    gain.gain.setValueAtTime(large ? 0.8 : 0.5, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + (large ? 0.6 : 0.3));
+    source.start(ac.currentTime);
+  } catch(e) {}
 }
 
 function playThrust() {
-  const ctx = getAudioCtx();
-  const bufferSize = ctx.sampleRate * 0.05;
-  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.15;
-  const source = ctx.createBufferSource();
-  source.buffer = buffer;
-  const filter = ctx.createBiquadFilter();
-  filter.type = 'bandpass';
-  filter.frequency.value = 120;
-  source.connect(filter);
-  filter.connect(ctx.destination);
-  source.start(ctx.currentTime);
+  try {
+    const ac = getAudioCtx();
+    if (!ac) return;
+    const bufferSize = ac.sampleRate * 0.05;
+    const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.15;
+    const source = ac.createBufferSource();
+    source.buffer = buffer;
+    const filter = ac.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 120;
+    source.connect(filter);
+    filter.connect(ac.destination);
+    source.start(ac.currentTime);
+  } catch(e) {}
 }
 
 function playPowerup() {
-  const ctx = getAudioCtx();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(440, ctx.currentTime);
-  osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 0.1);
-  osc.frequency.linearRampToValueAtTime(1320, ctx.currentTime + 0.2);
-  gain.gain.setValueAtTime(0.3, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + 0.3);
+  try {
+    const ac = getAudioCtx();
+    if (!ac) return;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, ac.currentTime);
+    osc.frequency.linearRampToValueAtTime(880, ac.currentTime + 0.1);
+    osc.frequency.linearRampToValueAtTime(1320, ac.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.3, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.3);
+    osc.start(ac.currentTime);
+    osc.stop(ac.currentTime + 0.3);
+  } catch(e) {}
 }
 
 // ─── Resize ───
@@ -791,8 +812,12 @@ function draw() {
 
 // ─── Game loop ───
 function gameLoop() {
-  update();
-  draw();
+  try {
+    update();
+    draw();
+  } catch(e) {
+    console.error('Game loop error:', e);
+  }
   requestAnimationFrame(gameLoop);
 }
 
