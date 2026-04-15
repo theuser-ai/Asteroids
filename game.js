@@ -31,6 +31,11 @@ const POWERUP_DURATION = 480;   // 8 seconds at 60fps
 const POWERUP_SPAWN_CHANCE = 0.3;
 const POWERUP_TYPES = ['shield', 'doubleshot', 'rapidfire'];
 
+// ─── Mobile difficulty tuning ───
+const MOBILE_SPEED_MULT   = 0.7;   // 30% slower asteroids
+const MOBILE_ASTEROID_MULT = 0.65; // ~35% fewer asteroids (stacks with existing 0.8)
+const MOBILE_INVINCIBLE    = 320;  // longer invincibility after respawn
+
 // ─── Game state ───
 let state = 'start';
 let ship, asteroids, bullets, particles, powerups, score, lives, level;
@@ -125,7 +130,7 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// ─── Detect touch device ───
+// ─── Detect touch/mobile device ───
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
 
 // Set start prompt text based on device
@@ -159,18 +164,61 @@ document.getElementById('game-over-screen').addEventListener('touchend', e => {
   if (state === 'gameover') startGame();
 });
 
-// ─── Touch controls ───
-function bindTouchBtn(id, keyCode) {
-  const btn = document.getElementById(id);
-  btn.addEventListener('touchstart', e => { e.preventDefault(); keys[keyCode] = true; btn.classList.add('pressed'); }, { passive: false });
-  btn.addEventListener('touchend',   e => { e.preventDefault(); keys[keyCode] = false; btn.classList.remove('pressed'); }, { passive: false });
-  btn.addEventListener('touchcancel',e => { keys[keyCode] = false; btn.classList.remove('pressed'); });
+// ─── Virtual Joystick ───
+const joystickZone = document.getElementById('joystick-zone');
+const joystickKnob = document.getElementById('joystick-knob');
+const JOYSTICK_MAX  = 42; // max knob travel in px
+const JOYSTICK_DEAD = 12; // dead zone in px
+
+let joystickTouchId = null;
+let joystickOrigin  = { x: 0, y: 0 };
+
+function joystickApply(dx, dy) {
+  keys['ArrowLeft']  = dx < -JOYSTICK_DEAD;
+  keys['ArrowRight'] = dx >  JOYSTICK_DEAD;
+  keys['ArrowUp']    = dy < -JOYSTICK_DEAD;
+  const clampedX = Math.max(-JOYSTICK_MAX, Math.min(JOYSTICK_MAX, dx));
+  const clampedY = Math.max(-JOYSTICK_MAX, Math.min(JOYSTICK_MAX, dy));
+  joystickKnob.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
 }
 
-bindTouchBtn('btn-left',   'ArrowLeft');
-bindTouchBtn('btn-right',  'ArrowRight');
-bindTouchBtn('btn-thrust', 'ArrowUp');
-bindTouchBtn('btn-fire',   'Space');
+function joystickReset() {
+  keys['ArrowLeft'] = keys['ArrowRight'] = keys['ArrowUp'] = false;
+  joystickKnob.style.transform = 'translate(0,0)';
+  joystickTouchId = null;
+}
+
+joystickZone.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (joystickTouchId !== null) return;
+  const t = e.changedTouches[0];
+  joystickTouchId = t.identifier;
+  joystickOrigin  = { x: t.clientX, y: t.clientY };
+}, { passive: false });
+
+joystickZone.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier !== joystickTouchId) continue;
+    const dx = t.clientX - joystickOrigin.x;
+    const dy = t.clientY - joystickOrigin.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len > JOYSTICK_MAX) {
+      joystickApply(dx / len * JOYSTICK_MAX, dy / len * JOYSTICK_MAX);
+    } else {
+      joystickApply(dx, dy);
+    }
+  }
+}, { passive: false });
+
+joystickZone.addEventListener('touchend',    e => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === joystickTouchId) joystickReset(); }, { passive: false });
+joystickZone.addEventListener('touchcancel', e => { joystickReset(); });
+
+// Fire button
+const btnFire = document.getElementById('btn-fire');
+btnFire.addEventListener('touchstart', e => { e.preventDefault(); keys['Space'] = true;  btnFire.classList.add('pressed'); }, { passive: false });
+btnFire.addEventListener('touchend',   e => { e.preventDefault(); keys['Space'] = false; btnFire.classList.remove('pressed'); }, { passive: false });
+btnFire.addEventListener('touchcancel',e => { keys['Space'] = false; btnFire.classList.remove('pressed'); });
 
 // ─── Ship factory ───
 function createShip() {
@@ -181,7 +229,7 @@ function createShip() {
     dx: 0,
     dy: 0,
     thrusting: false,
-    invincible: INVINCIBLE_TIME,
+    invincible: isTouchDevice() ? MOBILE_INVINCIBLE : INVINCIBLE_TIME,
     visible: true,
     alive: true,
   };
@@ -190,7 +238,8 @@ function createShip() {
 // ─── Asteroid factory ───
 function createAsteroid(x, y, size) {
   const angle = Math.random() * Math.PI * 2;
-  const speed = ASTEROID_SPEED * (1 + Math.random()) * (3 / size);
+  const mobileMult = isTouchDevice() ? MOBILE_SPEED_MULT : 1;
+  const speed = ASTEROID_SPEED * mobileMult * (1 + Math.random()) * (3 / size);
   const offsets = [];
   for (let i = 0; i < ASTEROID_VERTICES; i++) {
     offsets.push(1 + Math.random() * ASTEROID_JAG * 2 - ASTEROID_JAG);
@@ -267,7 +316,8 @@ function startGame() {
   fireCooldown = 0;
   respawnTimer = 0;
   ship = createShip();
-  spawnAsteroids(Math.round((4 + level) * 0.8));
+  const mult = isTouchDevice() ? MOBILE_ASTEROID_MULT : 0.8;
+  spawnAsteroids(Math.round((4 + level) * mult));
   startScreen.classList.add('hidden');
   gameOverScreen.classList.add('hidden');
 }
@@ -441,7 +491,8 @@ function update() {
   // Next level
   if (asteroids.length === 0) {
     level++;
-    spawnAsteroids(Math.round((4 + level) * 0.8));
+    const mult = isTouchDevice() ? MOBILE_ASTEROID_MULT : 0.8;
+    spawnAsteroids(Math.round((4 + level) * mult));
   }
 
   // UI
