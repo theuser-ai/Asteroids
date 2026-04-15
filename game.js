@@ -172,18 +172,20 @@ const JOYSTICK_DEAD = 12; // dead zone in px
 
 let joystickTouchId = null;
 let joystickOrigin  = { x: 0, y: 0 };
+let joystickState   = { active: false, angle: 0, magnitude: 0 };
 
 function joystickApply(dx, dy) {
-  keys['ArrowLeft']  = dx < -JOYSTICK_DEAD;
-  keys['ArrowRight'] = dx >  JOYSTICK_DEAD;
-  keys['ArrowUp']    = dy < -JOYSTICK_DEAD;
-  const clampedX = Math.max(-JOYSTICK_MAX, Math.min(JOYSTICK_MAX, dx));
-  const clampedY = Math.max(-JOYSTICK_MAX, Math.min(JOYSTICK_MAX, dy));
+  const magnitude = Math.sqrt(dx * dx + dy * dy);
+  const clampedX = magnitude > JOYSTICK_MAX ? dx / magnitude * JOYSTICK_MAX : dx;
+  const clampedY = magnitude > JOYSTICK_MAX ? dy / magnitude * JOYSTICK_MAX : dy;
   joystickKnob.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
+  joystickState.active    = magnitude > JOYSTICK_DEAD;
+  joystickState.magnitude = magnitude;
+  joystickState.angle     = Math.atan2(dy, dx);
 }
 
 function joystickReset() {
-  keys['ArrowLeft'] = keys['ArrowRight'] = keys['ArrowUp'] = false;
+  joystickState.active = false;
   joystickKnob.style.transform = 'translate(0,0)';
   joystickTouchId = null;
 }
@@ -334,9 +336,15 @@ function update() {
 
   // Ship controls
   if (ship.alive) {
-    if (keys['ArrowLeft'] || keys['KeyA']) ship.angle -= TURN_SPEED;
-    if (keys['ArrowRight'] || keys['KeyD']) ship.angle += TURN_SPEED;
-    ship.thrusting = keys['ArrowUp'] || keys['KeyW'];
+    if (joystickState.active) {
+      // Joystick: direct angle + auto-thrust
+      ship.angle     = joystickState.angle;
+      ship.thrusting = true;
+    } else {
+      if (keys['ArrowLeft'] || keys['KeyA']) ship.angle -= TURN_SPEED;
+      if (keys['ArrowRight'] || keys['KeyD']) ship.angle += TURN_SPEED;
+      ship.thrusting = keys['ArrowUp'] || keys['KeyW'];
+    }
 
     if (ship.thrusting) {
       ship.dx += Math.cos(ship.angle) * SHIP_THRUST;
